@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Medical Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5.0&t={{ timestamp }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* FORCE COMPLETE OVERRIDE - LIGHT MINT GREEN THEME */
+        html, body, div, span, h1, h2, h3, p, button, input {
+            all: unset !important;
+        }
+        
+        * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+        }
+        
+        html, body {
+            font-family: 'Inter', sans-serif !important;
+            background: #c7f0db !important; /* Light mint green */
+            color: #2d3748 !important; /* Dark text */
+            height: 100vh !important;
+            width: 100vw !important;
+            overflow: hidden !important;
+        }
+        
+        .app-container {
+            display: flex !important;
+            height: 100vh !important;
+            width: 100vw !important;
+            background: #c7f0db !important; /* Light mint green */
+        }
+        
+        /* HIDE SIDEBAR COMPLETELY */
+        .sidebar {
+            display: none !important;
+        }
+        
+        /* MAIN CONTENT - FULL SCREEN */
+        .main-content {
+            flex: 1 !important;
+            width: 100vw !important;
+            background: #c7f0db !important; /* Light mint green */
+            height: 100vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar is now hidden -->
+        
+        <!-- Main Content - Full Screen -->
+        <div class="main-content">
+            <!-- Header -->
+            <div style="padding: 24px 32px; border-bottom: 1px solid #22c55e; display: flex; justify-content: space-between; align-items: center; background: #4ade80;">
+                <div>
+                    <h2 style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 4px;">MCP Medical Assistant</h2>
+                    <span style="font-size: 14px; color: #fff;">AI-powered patient management system</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button style="width: 40px; height: 40px; border: none; background: #22c55e; color: #fff; border-radius: 8px; cursor: pointer; font-size: 16px;">🔍</button>
+                    <button style="width: 40px; height: 40px; border: none; background: #22c55e; color: #fff; border-radius: 8px; cursor: pointer; font-size: 16px;">⚙️</button>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <div style="font-size: 32px;">🤖</div>
+                    <div>
+                        <h3 style="font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 8px;">Welcome to MCP Medical Assistant</h3>
+                        <p style="font-size: 14px; color: #fff; line-height: 1.5;">
+                            I can help you search and manage patient records. Try asking me about patients, appointments, or medical records.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div style="padding: 0 32px 24px; display: flex; gap: 12px; background: #4ade80;">
+                <div class="quick-btn" onclick="sendQuickMessage('Show all patients')">
+                    <span>👥</span>
+                    <span>All Patients</span>
+                </div>
+                <div class="quick-btn" onclick="sendQuickMessage('Show male patients')">
+                    <span>👨</span>
+                    <span>Male Patients</span>
+                </div>
+                <div class="quick-btn" onclick="sendQuickMessage('Show female patients')">
+                    <span>👩</span>
+                    <span>Female Patients</span>
+                </div>
+                <div class="quick-btn" onclick="sendQuickMessage('Patients enrolled in 2024')">
+                    <span>📅</span>
+                    <span>2024 Enrollments</span>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div style="padding: 0 32px 32px; background: #4ade80;">
+                <div style="display: flex; align-items: center; background: #22c55e; border: 1px solid #16a34a; border-radius: 12px; padding: 4px; gap: 8px;">
+                    <button style="width: 36px; height: 36px; border: none; background: transparent; color: #fff; border-radius: 8px; cursor: pointer; font-size: 16px;">📎</button>
+                    <input type="text" id="messageInput" placeholder="Ask me about patients, records, or appointments..." 
+                           style="flex: 1; border: none; background: transparent; padding: 12px 8px; font-size: 14px; color: #fff; outline: none;"
+                           onkeypress="handleKeyPress(event)">
+                    <button id="sendButton" onclick="sendMessage()" 
+                            style="width: 36px; height: 36px; border: none; background: #16a34a; color: white; border-radius: 8px; cursor: pointer; font-size: 16px;">➤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let messageCounter = 0;
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendQuickMessage(message) {
+            document.getElementById('messageInput').value = message;
+            sendMessage();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            
+            // Clear input
+            input.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Send to backend
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideTypingIndicator();
+                addMessage(data.response, 'bot');
+            })
+            .catch(error => {
+                hideTypingIndicator();
+                addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+                console.error('Error:', error);
+            });
+        }
+
+        function addMessage(message, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.style.animation = 'fadeIn 0.3s ease-in';
+            
+            const isUser = sender === 'user';
+            const avatarBg = isUser ? '#16a34a' : '#22c55e';
+            const messageBg = isUser ? '#16a34a' : '#22c55e';
+            const avatar = isUser ? '👤' : '🤖';
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; background: ${avatarBg}; color: white; ${isUser ? 'margin-left: 12px;' : 'margin-right: 12px;'} flex-shrink: 0;">
+                    ${avatar}
+                </div>
+                <div class="message-content" style="max-width: 100%; background: ${messageBg}; border: 1px solid #15803d; border-radius: 16px; padding: 16px 20px;">
+                    <div class="message-bubble" style="color: #fff; line-height: 1.5;">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            if (isUser) {
+                messageDiv.style.flexDirection = 'row-reverse';
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const chatMessages = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'message bot-message';
+            typingDiv.innerHTML = `
+                <div class="message-avatar" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 12px; flex-shrink: 0; background: #22c55e; color: white;">
+                    🤖
+                </div>
+                <div class="message-content" style="background: #22c55e; border: 1px solid #15803d; border-radius: 16px; padding: 16px 20px;">
+                    <div class="message-bubble" style="color: #fff;">
+                        <span>Thinking...</span>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Focus on input when page loads
+        window.onload = function() {
+            document.getElementById('messageInput').focus();
+        };
+    </script>
+</body>
+</html>
+
+
