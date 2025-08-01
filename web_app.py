@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 from config import Config
 from llm.router_api_llm import RouterAPILLM
 import logging
@@ -7,6 +7,29 @@ import os
 
 app = Flask(__name__)
 config = Config()
+
+# CSP and Teams integration headers
+def add_teams_headers(response):
+    """Add headers required for Microsoft Teams integration"""
+    response.headers['Content-Security-Policy'] = (
+        "frame-ancestors 'self' https://teams.microsoft.com https://*.teams.microsoft.com "
+        "https://*.skype.com https://*.teams.microsoft.us https://*.gov.teams.microsoft.us; "
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://res.cdn.office.net "
+        "https://statics.teams.cdn.office.net https://teams.microsoft.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https: wss:;"
+    )
+    response.headers['X-Frame-Options'] = 'ALLOW-FROM https://teams.microsoft.com'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
+@app.after_request
+def after_request(response):
+    return add_teams_headers(response)
 
 # Setup logging for production
 logging.basicConfig(
@@ -24,8 +47,15 @@ except Exception as e:
 
 @app.route('/')
 def index():
-    """Main chatbot interface"""
-    return render_template('index.html', timestamp=int(time.time()))
+    """Main chatbot interface - Teams compatible"""
+    response = make_response(render_template('teams_index.html', timestamp=int(time.time())))
+    return response
+
+@app.route('/teams')
+def teams_tab():
+    """Dedicated Teams tab interface"""
+    response = make_response(render_template('teams_index.html', timestamp=int(time.time())))
+    return response
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -85,6 +115,16 @@ def status():
         'llm_ready': llm is not None
     })
 
+@app.route('/privacy')
+def privacy():
+    """Privacy policy for Teams app"""
+    return render_template('privacy.html')
+
+@app.route('/terms')
+def terms():
+    """Terms of use for Teams app"""
+    return render_template('terms.html')
+
 if __name__ == '__main__':
     print("🚀 Starting MCP Chatbot Web Interface...")
     port = int(os.environ.get('PORT', 3000))
@@ -93,4 +133,6 @@ if __name__ == '__main__':
     
     # Use debug=False for production
     app.run(host='0.0.0.0', port=port, debug=False)
+
+
 

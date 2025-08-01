@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Medical Assistant - Teams</title>
+    <script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Teams-optimized styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f3f2f1;
+            color: #323130;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+        
+        .teams-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            background: #f3f2f1;
+        }
+        
+        /* Teams-style header */
+        .teams-header {
+            background: #464775;
+            color: white;
+            padding: 12px 20px;
+            border-bottom: 1px solid #e1dfdd;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 48px;
+        }
+        
+        .teams-header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .teams-header .icon {
+            width: 24px;
+            height: 24px;
+            background: #6264a7;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        /* Chat area optimized for Teams */
+        .teams-chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            margin: 8px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .teams-chat-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background: white;
+        }
+        
+        .teams-message {
+            display: flex;
+            margin-bottom: 16px;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        
+        .teams-message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .teams-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .teams-avatar.user {
+            background: #6264a7;
+            color: white;
+        }
+        
+        .teams-avatar.bot {
+            background: #00bcf2;
+            color: white;
+        }
+        
+        .teams-message-content {
+            max-width: 70%;
+            background: #f3f2f1;
+            border-radius: 8px;
+            padding: 12px 16px;
+            position: relative;
+        }
+        
+        .teams-message.user .teams-message-content {
+            background: #6264a7;
+            color: white;
+        }
+        
+        /* Teams-style input area */
+        .teams-input-area {
+            padding: 16px;
+            background: white;
+            border-top: 1px solid #e1dfdd;
+        }
+        
+        .teams-input-container {
+            display: flex;
+            align-items: center;
+            background: #f3f2f1;
+            border: 1px solid #e1dfdd;
+            border-radius: 4px;
+            padding: 8px 12px;
+            gap: 8px;
+        }
+        
+        .teams-input-container:focus-within {
+            border-color: #6264a7;
+            box-shadow: 0 0 0 1px #6264a7;
+        }
+        
+        .teams-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 14px;
+            font-family: inherit;
+            color: #323130;
+        }
+        
+        .teams-input::placeholder {
+            color: #605e5c;
+        }
+        
+        .teams-send-btn {
+            background: #6264a7;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        .teams-send-btn:hover {
+            background: #464775;
+        }
+        
+        .teams-send-btn:disabled {
+            background: #c8c6c4;
+            cursor: not-allowed;
+        }
+        
+        /* Quick actions for Teams */
+        .teams-quick-actions {
+            display: flex;
+            gap: 8px;
+            padding: 0 16px 16px;
+            flex-wrap: wrap;
+        }
+        
+        .teams-quick-btn {
+            background: white;
+            border: 1px solid #e1dfdd;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #323130;
+        }
+        
+        .teams-quick-btn:hover {
+            background: #f3f2f1;
+            border-color: #6264a7;
+        }
+        
+        /* Patient table styling for Teams */
+        .patient-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 12px;
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .patient-table th {
+            background: #6264a7;
+            color: white;
+            padding: 8px 6px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        
+        .patient-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #e1dfdd;
+            font-size: 11px;
+        }
+        
+        .patient-table tr:hover {
+            background: #f3f2f1;
+        }
+        
+        /* Responsive adjustments for Teams */
+        @media (max-width: 768px) {
+            .teams-header {
+                padding: 8px 12px;
+            }
+            
+            .teams-chat-messages {
+                padding: 12px;
+            }
+            
+            .teams-message-content {
+                max-width: 85%;
+            }
+            
+            .patient-table {
+                font-size: 10px;
+            }
+            
+            .patient-table th,
+            .patient-table td {
+                padding: 6px 4px;
+            }
+        }
+        
+        /* Loading indicator */
+        .teams-typing {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #605e5c;
+            font-style: italic;
+        }
+        
+        .teams-typing-dots {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .teams-typing-dot {
+            width: 4px;
+            height: 4px;
+            background: #605e5c;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        
+        .teams-typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .teams-typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                opacity: 0.3;
+            }
+            30% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="teams-container">
+        <!-- Teams-style header -->
+        <div class="teams-header">
+            <div class="icon">🏥</div>
+            <h1>MCP Medical Assistant</h1>
+        </div>
+        
+        <!-- Chat container -->
+        <div class="teams-chat-container">
+            <!-- Chat messages -->
+            <div class="teams-chat-messages" id="teamsMessages">
+                <div class="teams-message bot">
+                    <div class="teams-avatar bot">🤖</div>
+                    <div class="teams-message-content">
+                        <strong>Welcome to MCP Medical Assistant!</strong><br>
+                        I can help you search and manage patient records. Try asking me about patients, appointments, or medical records.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick actions -->
+            <div class="teams-quick-actions">
+                <div class="teams-quick-btn" onclick="sendQuickMessage('Show all patients')">👥 All Patients</div>
+                <div class="teams-quick-btn" onclick="sendQuickMessage('Show male patients')">👨 Male Patients</div>
+                <div class="teams-quick-btn" onclick="sendQuickMessage('Show female patients')">👩 Female Patients</div>
+                <div class="teams-quick-btn" onclick="sendQuickMessage('Patients enrolled in 2024')">📅 2024 Enrollments</div>
+            </div>
+            
+            <!-- Input area -->
+            <div class="teams-input-area">
+                <div class="teams-input-container">
+                    <input type="text" 
+                           class="teams-input" 
+                           id="teamsInput" 
+                           placeholder="Ask me about patients, records, or appointments..."
+                           onkeypress="handleTeamsKeyPress(event)">
+                    <button class="teams-send-btn" id="teamsSendBtn" onclick="sendTeamsMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Microsoft Teams SDK
+        microsoftTeams.app.initialize().then(() => {
+            console.log('✅ Teams SDK initialized');
+            
+            // Get Teams context
+            microsoftTeams.app.getContext().then((context) => {
+                console.log('📱 Teams context:', context);
+                
+                // Notify Teams that the app is ready
+                microsoftTeams.app.notifySuccess();
+            });
+        }).catch((error) => {
+            console.log('⚠️ Teams SDK not available, running in standalone mode');
+        });
+
+        let isProcessing = false;
+
+        function handleTeamsKeyPress(event) {
+            if (event.key === 'Enter' && !isProcessing) {
+                sendTeamsMessage();
+            }
+        }
+
+        function sendQuickMessage(message) {
+            if (isProcessing) return;
+            document.getElementById('teamsInput').value = message;
+            sendTeamsMessage();
+        }
+
+        function sendTeamsMessage() {
+            if (isProcessing) return;
+            
+            const input = document.getElementById('teamsInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            isProcessing = true;
+            document.getElementById('teamsSendBtn').disabled = true;
+            
+            // Add user message
+            addTeamsMessage(message, 'user');
+            input.value = '';
+            
+            // Show typing indicator
+            showTeamsTyping();
+            
+            // Send to backend
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideTeamsTyping();
+                addTeamsMessage(data.response, 'bot');
+            })
+            .catch(error => {
+                hideTeamsTyping();
+                addTeamsMessage('Sorry, I encountered an error. Please try again.', 'bot');
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                isProcessing = false;
+                document.getElementById('teamsSendBtn').disabled = false;
+            });
+        }
+
+        function addTeamsMessage(message, sender) {
+            const messagesContainer = document.getElementById('teamsMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `teams-message ${sender}`;
+            
+            const isUser = sender === 'user';
+            const avatar = isUser ? '👤' : '🤖';
+            const avatarClass = isUser ? 'user' : 'bot';
+            
+            messageDiv.innerHTML = `
+                <div class="teams-avatar ${avatarClass}">${avatar}</div>
+                <div class="teams-message-content">
+                    ${formatTeamsMessage(message)}
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function formatTeamsMessage(content) {
+            // Enhanced formatting for Teams
+            let formatted = content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code style="background:#f3f2f1;padding:2px 4px;border-radius:2px;">$1</code>');
+            
+            if (!formatted.includes('<table>') && !formatted.includes('<div>')) {
+                formatted = formatted.replace(/\n/g, '<br>');
+            }
+            
+            return formatted;
+        }
+
+        function showTeamsTyping() {
+            const messagesContainer = document.getElementById('teamsMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'teamsTyping';
+            typingDiv.className = 'teams-message bot';
+            typingDiv.innerHTML = `
+                <div class="teams-avatar bot">🤖</div>
+                <div class="teams-message-content">
+                    <div class="teams-typing">
+                        <span>Thinking</span>
+                        <div class="teams-typing-dots">
+                            <div class="teams-typing-dot"></div>
+                            <div class="teams-typing-dot"></div>
+                            <div class="teams-typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideTeamsTyping() {
+            const typingDiv = document.getElementById('teamsTyping');
+            if (typingDiv) {
+                typingDiv.remove();
+            }
+        }
+    </script>
+</body>
+</html>
