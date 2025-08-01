@@ -24,28 +24,9 @@ class RouterAPILLM:
         print(f"   System prompt: {len(self.system_prompt)} chars")
     
     def process_query(self, user_input: str) -> str:
-        """Process user query and return response"""
+        """Process user query with better error handling"""
         try:
-            print(f"🔍 Processing query: {user_input}")
-            
-            # Force function calling for patient queries
-            if any(keyword in user_input.lower() for keyword in ['patient', 'male', 'female', 'show', 'find', 'get']):
-                print("🎯 Detected patient query - usg LLLLM parameter extraaramextraction")
-                
-                # Use LLM to ese LLM to extraca
-                params = self._extract_parameters_with_llm(user_input)
-                print(f"🎯 LLM LLM EXTRACTED PARAMETERS: {params}")
-                
-                # Call patient tool directly
-                result = self.patient_tool.get_patients(**params)
-                print(f"📊 Direct function call result: Success={result.get('Success')}, Count={len(result.get('Data', []))}")
-                
-                if result.get('Success') and result.get('Data'):
-                    return self._format_patients_as_html_table(result)
-                else:
-                    return f"No patients found matching your criteria. Error: {result.get('Message', 'Unknown error')}"
-            
-            # Continue with normal LLM processing for other queries
+            # Add timeout and better error handling
             messages = [
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": user_input}
@@ -58,9 +39,10 @@ class RouterAPILLM:
                 functions=PATIENT_FUNCTION_SCHEMAS,
                 function_call="auto",
                 temperature=0.1,
-                max_tokens=2000,
+                max_tokens=1000,  # Reduced from 2000
+                timeout=30,  # Add 30 second timeout
                 extra_headers={
-                    "HTTP-Referer": "http://localhost:3000",
+                    "HTTP-Referer": "https://teams-chatbot-at8z.onrender.com",
                     "X-Title": "Medical Assistant Chatbot"
                 }
             )
@@ -71,54 +53,22 @@ class RouterAPILLM:
                 function_name = message.function_call.name
                 function_args = json.loads(message.function_call.arguments)
                 
-                print(f"🤖 LLM called function: {function_name} with args: {function_args}")
+                print(f"🤖 LLM called function: {function_name}")
                 
-                function_result = self._execute_function(function_name, function_args)
+                # Add timeout to function execution
+                function_result = self._execute_function_with_timeout(function_name, function_args)
                 
-                if function_result.get('Success') and function_result.get('Data'):
-                    formatted_result = self._process_patients_data(function_result)
-                    
-                    if function_name == "get_patients":
-                        return self._format_patients_as_html_table(formatted_result)
-                    else:
-                        # Get final response from LLM for other functions
-                        messages.append({
-                            "role": "assistant",
-                            "content": None,
-                            "function_call": {
-                                "name": function_name,
-                                "arguments": message.function_call.arguments
-                            }
-                        })
-                        messages.append({
-                            "role": "function",
-                            "name": function_name,
-                            "content": json.dumps(formatted_result)
-                        })
-                        
-                        final_response = self.client.chat.completions.create(
-                            model=self.model,
-                            messages=messages,
-                            temperature=0.1,
-                            max_tokens=2000,
-                            extra_headers={
-                                "HTTP-Referer": "http://localhost:3000",
-                                "X-Title": "Medical Assistant Chatbot"
-                            }
-                        )
-                        
-                        return final_response.choices[0].message.content
+                if function_result.get('Success'):
+                    return self._format_response(function_result, function_name)
                 else:
-                    return f"❌ No patients found matching your criteria: {function_result.get('Message', 'Unknown error')}"
+                    return f"❌ Error: {function_result.get('Message', 'Unknown error')}"
             else:
-                return message.content
+                return message.content or "❌ No response received"
                 
         except Exception as e:
-            print(f"❌ Error processing query: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return f"❌ Error processing query: {str(e)}"
-    
+            print(f"❌ Error in process_query: {str(e)}")
+            return f"❌ Sorry, I encountered an error: {str(e)}"
+
     def _format_patients_as_html_table(self, result):
         """Format patient data as HTML table with proper DOB handling"""
         if not result.get('Success') or not result.get('Data'):
@@ -199,7 +149,29 @@ class RouterAPILLM:
         except Exception as e:
             print(f"❌ Function execution error: {str(e)}")
             return {"Success": False, "Message": f"Function execution error: {str(e)}", "Data": None}
-    
+
+    def _execute_function_with_timeout(self, function_name: str, function_args: dict, timeout=15):
+        """Execute function with timeout"""
+        import signal
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Function execution timed out")
+        
+        try:
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(timeout)
+            
+            result = self._execute_function(function_name, function_args)
+            
+            signal.alarm(0)  # Cancel alarm
+            return result
+            
+        except TimeoutError:
+            return {"Success": False, "Message": "Request timed out", "Data": None}
+        except Exception as e:
+            signal.alarm(0)  # Cancel alarm
+            return {"Success": False, "Message": str(e), "Data": None}
+
     def _process_patients_data(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Process patients data and calculate ages for ALL patients"""
         if not result.get('Success') or not result.get('Data'):
@@ -563,6 +535,7 @@ JSON:"""
             print(f"❌ LLM parameter extraction failed: {str(e)}")
             # Fallback to manual extraction
             return self._extract_parameters_manually(user_input)
+
 
 
 

@@ -6,9 +6,9 @@
     "packageName": "com.mcpmedical.assistant",
     "developer": {
         "name": "MCP Medical Team",
-        "websiteUrl": "https://your-chatbot.onrender.com",
-        "privacyUrl": "https://your-chatbot.onrender.com/privacy",
-        "termsOfUseUrl": "https://your-chatbot.onrender.com/terms"
+        "websiteUrl": "https://teams-chatbot-at8z.onrender.com",
+        "privacyUrl": "https://teams-chatbot-at8z.onrender.com/privacy",
+        "termsOfUseUrl": "https://teams-chatbot-at8z.onrender.com/terms"
     },
     "icons": {
         "color": "icon-color.png",
@@ -27,8 +27,8 @@
         {
             "entityId": "mcp-medical-tab",
             "name": "Medical Assistant",
-            "contentUrl": "https://your-chatbot.onrender.com/teams",
-            "websiteUrl": "https://your-chatbot.onrender.com",
+            "contentUrl": "https://teams-chatbot-at8z.onrender.com/teams",
+            "websiteUrl": "https://teams-chatbot-at8z.onrender.com",
             "scopes": ["personal", "team"]
         }
     ],
@@ -37,10 +37,11 @@
         "messageTeamMembers"
     ],
     "validDomains": [
-        "your-chatbot.onrender.com"
+        "teams-chatbot-at8z.onrender.com"
     ],
     "webApplicationInfo": {
         "id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
-        "resource": "https://your-chatbot.onrender.com"
+        "resource": "https://teams-chatbot-at8z.onrender.com"
     }
 }
+

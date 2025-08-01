@@ -56,24 +56,38 @@ function sendMessage() {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: message })
+        body: JSON.stringify({ message: message }),
+        timeout: 30000  // 30 second timeout
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
-        // Remove typing indicator
         typingDiv.remove();
         
         if (data.response) {
             addMessage(data.response, 'bot');
         } else {
-            addMessage('Sorry, I encountered an error processing your request.', 'bot');
+            addMessage('❌ Sorry, I received an empty response. Please try again.', 'bot');
         }
     })
     .catch(error => {
-        // Remove typing indicator
         typingDiv.remove();
         console.error('Error:', error);
-        addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+        
+        let errorMessage = '❌ Sorry, I encountered an error. ';
+        if (error.message.includes('502')) {
+            errorMessage += 'The server is temporarily unavailable. Please try again in a moment.';
+        } else if (error.message.includes('timeout')) {
+            errorMessage += 'The request timed out. Please try a simpler question.';
+        } else {
+            errorMessage += 'Please try again.';
+        }
+        
+        addMessage(errorMessage, 'bot');
     })
     .finally(() => {
         isProcessing = false;
@@ -200,6 +214,7 @@ function scrollToBottom() {
     const messagesContainer = document.getElementById('chatMessages');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
+
 
 
 

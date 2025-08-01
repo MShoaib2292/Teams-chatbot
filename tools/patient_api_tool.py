@@ -154,6 +154,40 @@ class PatientAPITool:
             print(f"❌ MCP server request failed: {str(e)}")
             return {"Success": False, "Message": f"MCP Server Error: {str(e)}", "Data": None}
 
+    def search_patients(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Search for patients with enhanced error handling"""
+        try:
+            url = f"{self.base_url}/patients"
+            print(f"🔍 Calling MCP server: {url}")
+            print(f"📋 Search params: {search_params}")
+            
+            # Add timeout and better error handling
+            response = requests.get(url, params=search_params, timeout=30)
+            
+            print(f"📡 Response status: {response.status_code}")
+            print(f"📡 Response headers: {dict(response.headers)}")
+            
+            response.raise_for_status()
+            
+            result = response.json()
+            print(f"✅ MCP server response: Success={result.get('Success')}")
+            print(f"📊 Data count: {len(result.get('Data', []))}")
+            
+            return result
+            
+        except requests.exceptions.Timeout:
+            print(f"⏰ MCP server timeout")
+            return {"Success": False, "Message": "MCP Server timeout - please try again", "Data": []}
+        except requests.exceptions.ConnectionError:
+            print(f"🔌 MCP server connection error")
+            return {"Success": False, "Message": "Cannot connect to MCP Server", "Data": []}
+        except requests.RequestException as e:
+            print(f"❌ MCP server request failed: {str(e)}")
+            return {"Success": False, "Message": f"MCP Server Error: {str(e)}", "Data": []}
+        except Exception as e:
+            print(f"❌ Unexpected error: {str(e)}")
+            return {"Success": False, "Message": f"Unexpected error: {str(e)}", "Data": []}
+
 # Updated Function Schemas for OpenAI/OpenRouter
 PATIENT_FUNCTION_SCHEMAS = [
     {
@@ -213,6 +247,7 @@ PATIENT_FUNCTION_SCHEMAS = [
     #     }
     # }
 ]
+
 
 
 

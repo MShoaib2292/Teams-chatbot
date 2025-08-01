@@ -298,6 +298,31 @@
                 opacity: 1;
             }
         }
+
+        /* Dark theme support for Teams */
+        .teams-dark-theme {
+            background: #1e1e1e !important;
+            color: #ffffff !important;
+        }
+
+        .teams-dark-theme .teams-container {
+            background: #1e1e1e !important;
+        }
+
+        .teams-dark-theme .teams-chat-container {
+            background: #2d2d2d !important;
+        }
+
+        .teams-dark-theme .teams-message-content {
+            background: #3a3a3a !important;
+            color: #ffffff !important;
+        }
+
+        .teams-dark-theme .teams-input {
+            background: #3a3a3a !important;
+            color: #ffffff !important;
+            border-color: #555555 !important;
+        }
     </style>
 </head>
 <body>
@@ -354,9 +379,15 @@
                 
                 // Notify Teams that the app is ready
                 microsoftTeams.app.notifySuccess();
+                
+                // Optional: Customize based on Teams context
+                if (context.app.theme === 'dark') {
+                    document.body.classList.add('teams-dark-theme');
+                }
             });
         }).catch((error) => {
             console.log('⚠️ Teams SDK not available, running in standalone mode');
+            console.error('Teams SDK Error:', error);
         });
 
         let isProcessing = false;
@@ -480,3 +511,4 @@
     </script>
 </body>
 </html>
+

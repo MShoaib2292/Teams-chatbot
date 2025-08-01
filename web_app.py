@@ -13,16 +13,18 @@ def add_teams_headers(response):
     """Add headers required for Microsoft Teams integration"""
     response.headers['Content-Security-Policy'] = (
         "frame-ancestors 'self' https://teams.microsoft.com https://*.teams.microsoft.com "
-        "https://*.skype.com https://*.teams.microsoft.us https://*.gov.teams.microsoft.us; "
+        "https://*.skype.com https://*.teams.microsoft.us https://*.gov.teams.microsoft.us "
+        "https://*.office.com https://*.sharepoint.com https://*.office365.com; "
         "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://res.cdn.office.net "
-        "https://statics.teams.cdn.office.net https://teams.microsoft.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss:;"
+        "https://statics.teams.cdn.office.net https://teams.microsoft.com "
+        "https://fonts.googleapis.com https://*.office.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; "
+        "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; "
+        "img-src 'self' data: https: blob:; "
+        "connect-src 'self' https: wss: data:;"
     )
-    response.headers['X-Frame-Options'] = 'ALLOW-FROM https://teams.microsoft.com'
+    response.headers['X-Frame-Options'] = 'ALLOWALL'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     return response
@@ -59,7 +61,7 @@ def teams_tab():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Handle chat messages"""
+    """Handle chat messages with better error handling"""
     try:
         if not llm:
             return jsonify({
@@ -68,6 +70,12 @@ def chat():
             })
         
         data = request.get_json()
+        if not data:
+            return jsonify({
+                'response': '❌ No data received',
+                'error': True
+            })
+            
         user_message = data.get('message', '').strip()
         
         if not user_message:
@@ -77,31 +85,58 @@ def chat():
             })
         
         logger.info(f"📝 Processing user message: {user_message}")
-        response = llm.process_query(user_message)
-        logger.info(f"✅ Generated response: {response[:100]}...")
         
-        return jsonify({
-            'response': response,
-            'error': False
-        })
+        # Add timeout to LLM processing
+        try:
+            response = llm.process_query(user_message)
+            logger.info(f"✅ Generated response: {response[:100]}...")
+            
+            return jsonify({
+                'response': response,
+                'error': False
+            })
+            
+        except Exception as llm_error:
+            logger.error(f"❌ LLM Error: {str(llm_error)}")
+            return jsonify({
+                'response': f'❌ I encountered an error processing your request. Please try a simpler question or try again later.',
+                'error': True
+            })
         
     except Exception as e:
         logger.error(f"❌ Error in chat endpoint: {str(e)}")
         return jsonify({
-            'response': f'❌ Error: {str(e)}',
+            'response': f'❌ Server error. Please try again.',
             'error': True
-        })
+        }), 500
 
 @app.route('/health')
 def health():
-    """Health check endpoint for Render"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'MCP Medical Assistant Chatbot',
-        'mcp_server_url': config.MCP_SERVER_URL,
-        'llm_initialized': llm is not None,
-        'environment': 'production' if os.getenv('RENDER_SERVICE_NAME') else 'development'
-    })
+    """Enhanced health check endpoint"""
+    try:
+        # Test MCP server connection
+        mcp_status = "unknown"
+        try:
+            import requests
+            mcp_response = requests.get(f"{config.MCP_SERVER_URL}/health", timeout=5)
+            mcp_status = "healthy" if mcp_response.status_code == 200 else "unhealthy"
+        except:
+            mcp_status = "unreachable"
+        
+        return jsonify({
+            'status': 'healthy',
+            'service': 'MCP Medical Assistant Chatbot',
+            'mcp_server_url': config.MCP_SERVER_URL,
+            'mcp_server_status': mcp_status,
+            'llm_initialized': llm is not None,
+            'environment': 'production' if os.getenv('RENDER_SERVICE_NAME') else 'development',
+            'timestamp': int(time.time())
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
 
 @app.route('/status')
 def status():
@@ -125,6 +160,48 @@ def terms():
     """Terms of use for Teams app"""
     return render_template('terms.html')
 
+@app.route('/debug/mcp')
+def debug_mcp():
+    """Debug MCP server connection"""
+    try:
+        import requests
+        
+        # Test MCP server health
+        mcp_health_url = f"{config.MCP_SERVER_URL}/health"
+        patients_url = f"{config.MCP_SERVER_URL}/patients"
+        
+        debug_info = {
+            "mcp_server_url": config.MCP_SERVER_URL,
+            "health_check": "unknown",
+            "patients_endpoint": "unknown",
+            "error": None
+        }
+        
+        try:
+            # Test health endpoint
+            health_response = requests.get(mcp_health_url, timeout=10)
+            debug_info["health_check"] = {
+                "status": health_response.status_code,
+                "response": health_response.text[:200]
+            }
+        except Exception as e:
+            debug_info["health_check"] = f"Error: {str(e)}"
+        
+        try:
+            # Test patients endpoint
+            patients_response = requests.get(patients_url, timeout=10)
+            debug_info["patients_endpoint"] = {
+                "status": patients_response.status_code,
+                "response": patients_response.text[:200]
+            }
+        except Exception as e:
+            debug_info["patients_endpoint"] = f"Error: {str(e)}"
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     print("🚀 Starting MCP Chatbot Web Interface...")
     port = int(os.environ.get('PORT', 3000))
@@ -133,6 +210,10 @@ if __name__ == '__main__':
     
     # Use debug=False for production
     app.run(host='0.0.0.0', port=port, debug=False)
+
+
+
+
 
 
 
