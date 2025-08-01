@@ -111,7 +111,7 @@ def __init__(self):
     self.MODEL_NAME = os.getenv('OPENROUTER_MODEL', 'openai/gpt-3.5-turbo')
     
     # MCP Server Configuration - Check if URL is accessible
-    self.MCP_SERVER_URL = os.getenv('MCP_SERVER_URL', 'https://4ff78e0c0217.ngrok-free.app/api/mcp')
+    self.MCP_SERVER_URL = os.getenv('MCP_SERVER_URL')
     
     # Test MCP server connectivity at startup
     self._test_mcp_connection()
