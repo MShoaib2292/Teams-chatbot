@@ -1,6 +1,6 @@
 import requests
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
 # Function schemas for OpenAI/OpenRouter - Match stored procedure exactly
 PATIENT_FUNCTION_SCHEMAS = [
@@ -69,55 +69,72 @@ PATIENT_FUNCTION_SCHEMAS = [
 ]
 
 class PatientAPITool:
-    def __init__(self, mcp_server_url):
-        self.base_url = mcp_server_url.rstrip('/')
-        print(f"🔧 PatientAPITool initialized with MCP server: {self.base_url}")
+    def __init__(self, mcp_server_url: str):
+        self.mcp_server_url = mcp_server_url.rstrip('/')
+        self.timeout = 30
         
-        # Test connection immediately
-        try:
-            test_response = requests.get(f"{self.base_url}/patients", timeout=5)
-            print(f"✅ MCP Server connection test: {test_response.status_code}")
-        except Exception as e:
-            print(f"❌ MCP Server connection test failed: {e}")
+        # Add headers for ngrok
+        self.headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'ngrok-skip-browser-warning': 'true'  # Skip ngrok browser warning
+        }
+        
+        print(f"🔧 PatientAPITool initialized with URL: {self.mcp_server_url}")
     
-    def get_patients(self, **kwargs) -> Dict[str, Any]:
-        """Get list of patients with optional filters - calls MCP server /patients endpoint"""
+    def get_patients(self, **filters) -> Dict[str, Any]:
+        """Get patients with optional filters"""
         try:
-            # Build parameters for MCP server
-            params = {}
+            url = f"{self.mcp_server_url}/patients"
             
-            # Convert kwargs to API parameters
-            for key, value in kwargs.items():
-                if value is not None and value != '':
-                    params[key] = str(value)
-                    print(f"🔧 Adding parameter: {key}='{value}'")
+            # Clean filters - remove None/empty values
+            clean_filters = {k: v for k, v in filters.items() if v is not None and str(v).strip()}
             
-            url = f"{self.base_url}/patients"
-            print(f"🔍 CALLING MCP SERVER: {url}")
-            print(f"📋 WITH PARAMETERS: {params}")
+            print(f"🔍 Making request to: {url}")
+            print(f"📋 Filters: {clean_filters}")
             
-            response = requests.get(url, params=params, timeout=30)
-            print(f"🌐 MCP SERVER RESPONSE STATUS: {response.status_code}")
-            print(f"🌐 MCP SERVER RESPONSE TEXT: {response.text[:500]}...")
+            response = requests.post(
+                url, 
+                json=clean_filters,
+                headers=self.headers,
+                timeout=self.timeout
+            )
             
-            response.raise_for_status()
+            print(f"📡 Response status: {response.status_code}")
             
-            result = response.json()
-            print(f"✅ MCP SERVER PARSED RESULT: Success={result.get('Success')}, Data count={len(result.get('Data', []))}")
-            
-            # Log sample data to verify it's real data
-            if result.get('Data') and len(result['Data']) > 0:
-                sample_patient = result['Data'][0]
-                print(f"📊 SAMPLE PATIENT FROM MCP: {sample_patient}")
-            
-            return result
-            
-        except requests.RequestException as e:
-            print(f"❌ MCP server request failed: {str(e)}")
-            return {"Success": False, "Message": f"MCP Server Error: {str(e)}", "Data": None}
+            if response.status_code == 200:
+                data = response.json()
+                print(f"✅ Successfully retrieved {len(data.get('patients', []))} patients")
+                return data
+            else:
+                print(f"❌ API Error: {response.status_code} - {response.text}")
+                return {
+                    "patients": [],
+                    "total_count": 0,
+                    "error": f"API returned status {response.status_code}"
+                }
+                
+        except requests.exceptions.Timeout:
+            print(f"⏰ Request timeout after {self.timeout} seconds")
+            return {
+                "patients": [],
+                "total_count": 0,
+                "error": "Request timeout - MCP server may be slow"
+            }
+        except requests.exceptions.ConnectionError:
+            print(f"🔌 Connection error to MCP server")
+            return {
+                "patients": [],
+                "total_count": 0,
+                "error": "Cannot connect to MCP server"
+            }
         except Exception as e:
             print(f"❌ Unexpected error: {str(e)}")
-            return {"Success": False, "Message": f"Unexpected Error: {str(e)}", "Data": None}
+            return {
+                "patients": [],
+                "total_count": 0,
+                "error": f"Unexpected error: {str(e)}"
+            }
     
     def get_patient_details(self, patient_id: int) -> Dict[str, Any]:
         """Get specific patient details by ID - calls MCP server /patients/{id} endpoint"""
@@ -196,6 +213,7 @@ PATIENT_FUNCTION_SCHEMAS = [
     #     }
     # }
 ]
+
 
 
 

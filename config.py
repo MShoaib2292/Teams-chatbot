@@ -7,9 +7,14 @@ class Config:
         self.OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://openrouter.ai/api/v1')
         self.MODEL_NAME = os.getenv('OPENROUTER_MODEL', 'openai/gpt-3.5-turbo')
         
-        # MCP Server Configuration
-        self.MCP_SERVER_URL = os.getenv('MCP_SERVER_URL', 'http://localhost:5001/api/mcp')
-
+        # MCP Server Configuration - Production Ready
+        self.MCP_SERVER_URL = os.getenv('MCP_SERVER_URL', 'https://87df80752dba.ngrok-free.app/api/mcp')
+        
+        # Production environment detection
+        if os.getenv('RENDER_SERVICE_NAME') or os.getenv('RENDER'):
+            print("🚀 Production environment detected (Render)")
+            self.MCP_SERVER_URL = os.getenv('MCP_SERVER_URL', 'https://87df80752dba.ngrok-free.app/api/mcp')
+        
         # Debug logging
         print(f"🔧 Config - OpenRouter API Key: {self.OPENROUTER_API_KEY[:20]}...")
         print(f"🔧 Config - Base URL: {self.OPENAI_BASE_URL}")
@@ -83,6 +88,8 @@ Always format patient results in clear HTML tables with all available columns an
         except Exception as e:
             print(f"❌ Error loading prompt file: {str(e)}")
             return "You are a helpful medical assistant AI that can access patient information through the MCP server."
+
+
 
 
 
